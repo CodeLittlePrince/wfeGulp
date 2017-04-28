@@ -6,7 +6,8 @@ var gulp = require('gulp'),
     autoprefixer = require('autoprefixer'),
     postcss = require('gulp-postcss'),
     clean = require('gulp-clean-old'),
-    rev = require('gulp-rev');
+    rev = require('gulp-rev'),
+    gulpSequence = require('gulp-sequence');
 
 // Scripts Tasks
 // 1.uglify
@@ -63,4 +64,4 @@ gulp.task('watch', function(){
 
 gulp.task('default', ['scripts', 'styles', 'watch']);
 
-gulp.task('build', ['clean', 'scripts', 'styles', 'images', 'version']);
+gulp.task('build', gulpSequence('clean', ['scripts', 'styles', 'images'], 'version'));
