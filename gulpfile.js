@@ -4,7 +4,9 @@ var gulp = require('gulp'),
     sourcemaps = require('gulp-sourcemaps'),
     imagemin = require('gulp-imagemin'),
     autoprefixer = require('autoprefixer'),
-    postcss = require('gulp-postcss');
+    postcss = require('gulp-postcss'),
+    clean = require('gulp-clean-old'),
+    rev = require('gulp-rev');
 
 // Scripts Tasks
 // 1.uglify
@@ -38,6 +40,19 @@ gulp.task('images', function(){
     .pipe(gulp.dest('build/img'))
 });
 
+// Clean Resource For "add resource hash version"
+gulp.task('clean', function(){
+    gulp.src('build/**/*.*', {read: false})
+    .pipe(clean());
+});
+// Add Resource Hash Version
+gulp.task('version', function(){
+    gulp.src(['build/js/*.js', 'build/css/*.css', 'build/img/*'])
+    .pipe(rev())
+    .pipe(rev.manifest())
+    .pipe(gulp.dest('build/'));
+});
+
 // Watch Tasks
 // 1.watch javascript
 // 2.watch scss
@@ -48,4 +63,4 @@ gulp.task('watch', function(){
 
 gulp.task('default', ['scripts', 'styles', 'watch']);
 
-gulp.task('build', ['scripts', 'styles', 'images'])
+gulp.task('build', ['clean', 'scripts', 'styles', 'images', 'version']);

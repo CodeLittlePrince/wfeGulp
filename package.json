@@ -3,8 +3,11 @@
     "autoprefixer": "^6.7.7",
     "gulp": "^3.9.1",
     "gulp-autoprefixer": "^3.1.1",
+    "gulp-clean-old": "^0.2.5",
+    "gulp-dev": "^0.3.0",
     "gulp-imagemin": "^3.2.0",
     "gulp-postcss": "^6.4.0",
+    "gulp-rev": "^7.1.2",
     "gulp-sourcemaps": "^2.6.0"
   },
   "dependencies": {
