@@ -31,7 +31,7 @@ var paths = {
     dest: 'dest/'
   }
 };
-// Scripts Tasks
+// Scripts process
 // 1.uglify
 // 2.generate mainfest
 function scripts(){
@@ -43,7 +43,7 @@ function scripts(){
         .pipe(gulp.dest(paths.scripts.rev));
 }
 
-// Styles Tasks
+// Styles process
 // 1.compile scss
 // 2.compress css
 // 3.add prefix
@@ -63,7 +63,7 @@ function styles(){
         .pipe(gulp.dest(paths.styles.rev));
 }
 
-// Images Tasks
+// Images process
 // 1.compress images
 // 2.generate mainfest
 function images(){
@@ -75,25 +75,27 @@ function images(){
         .pipe(gulp.dest(paths.images.rev));
 }
 
-// Clean Resource For "add resource hash version"
+// Clean
 function clean(){
     return del(['dest/**/*']);
 }
 
 // Genetate Files With Hash Suffix & Replace Link In HTML
+// e.g.: css/index.css => dest/css/index.css
 function replace() {
     return gulp.src(['src/rev/**/*.json', paths.tpl.src])
         .pipe(revCollector({
             replaceReved: true,  //模板中已经被替换的文件是否还能再被替换,默认是false
             dirReplacements: {   //标识目录替换的集合, 因为gulp-rev创建的manifest文件不包含任何目录信息,
                 'css/': 'css/',
-                'js/': 'js/'
+                'js/': 'js/',
+                'img/': 'img/'
             }
         }))
         .pipe(gulp.dest('dest'));
 }
 
-// Watch Tasks
+// Watch
 // 1.watch javascript
 // 2.watch scss
 function watch(){
