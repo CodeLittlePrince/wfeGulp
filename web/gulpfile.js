@@ -10,16 +10,37 @@ var gulp = require('gulp'),
     revCollector = require('gulp-rev-collector'),
     srcReplace = require('gulp-replace-src');
 
+var paths = {
+  scripts: {
+    src: 'src/js/**/*.js',
+    rev: 'src/rev/js/',
+    dest: 'dest/js/'
+  },
+  styles: {
+    src: 'src/scss/**/*.scss',
+    rev: 'src/rev/css/',
+    dest: 'dest/css/'
+  },
+  images: {
+    src: 'src/img/**/*',
+    rev: 'src/rev/img/',
+    dest: 'dest/img/'
+  },
+  tpl: {
+    src: 'src/*.html',
+    dest: 'dest/'
+  }
+};
 // Scripts Tasks
 // 1.uglify
 // 2.generate mainfest
 function scripts(){
-    return gulp.src('js/*.js')
+    return gulp.src(paths.scripts.src)
         .pipe(uglify())
         .pipe(rev())
-        .pipe(gulp.dest('build/js'))
+        .pipe(gulp.dest(paths.scripts.dest))
         .pipe(rev.manifest())
-        .pipe(gulp.dest('rev/js'));
+        .pipe(gulp.dest(paths.scripts.rev));
 }
 
 // Styles Tasks
@@ -29,39 +50,39 @@ function scripts(){
 // 4.add sourcemaps
 // 5.generate mainfest
 function styles(){
-    return sass('scss/**/*.scss', {
-        style: 'compressed',
-        sourcemap: true
-    })
-    .on('error', sass.logError)
-    .pipe(postcss([autoprefixer()]))
-    .pipe(sourcemaps.write())
-    .pipe(rev())
-    .pipe(gulp.dest('build/css'))
-    .pipe(rev.manifest())
-    .pipe(gulp.dest('rev/css'));
+    return sass(paths.styles.src, {
+            style: 'compressed',
+            sourcemap: true
+        })
+        .on('error', sass.logError)
+        .pipe(postcss([autoprefixer()]))
+        .pipe(sourcemaps.write())
+        .pipe(rev())
+        .pipe(gulp.dest(paths.styles.dest))
+        .pipe(rev.manifest())
+        .pipe(gulp.dest(paths.styles.rev));
 }
 
 // Images Tasks
 // 1.compress images
 // 2.generate mainfest
 function images(){
-    return gulp.src('img/*')
+    return gulp.src(paths.images.src)
         .pipe(imagemin())
         .pipe(rev())
-        .pipe(gulp.dest('build/img'))
+        .pipe(gulp.dest(paths.images.dest))
         .pipe(rev.manifest())
-        .pipe(gulp.dest('rev/img'));
+        .pipe(gulp.dest(paths.images.rev));
 }
 
 // Clean Resource For "add resource hash version"
 function clean(){
-    return del(['build/**/*', 'rev/**/*']);
+    return del(['dest/**/*']);
 }
 
 // Genetate Files With Hash Suffix & Replace Link In HTML
 function replace() {
-    return gulp.src(['rev/**/*.json','index.html'])
+    return gulp.src(['src/rev/**/*.json', paths.tpl.src])
         .pipe(revCollector({
             replaceReved: true,  //模板中已经被替换的文件是否还能再被替换,默认是false
             dirReplacements: {   //标识目录替换的集合, 因为gulp-rev创建的manifest文件不包含任何目录信息,
@@ -69,15 +90,15 @@ function replace() {
                 'js/': 'js/'
             }
         }))
-        .pipe(gulp.dest('build'));
+        .pipe(gulp.dest('dest'));
 }
 
 // Watch Tasks
 // 1.watch javascript
 // 2.watch scss
 function watch(){
-    gulp.watch('js/*.js', scripts);
-    gulp.watch('scss/**/*.scss', styles);
+    gulp.watch(paths.scripts.src, scripts);
+    gulp.watch(paths.styles.src, styles);
 }
 
 exports.clean = clean;
