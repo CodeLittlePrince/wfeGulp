@@ -3,38 +3,56 @@ var gulp = require('gulp'),
     sass = require('gulp-ruby-sass'),
     sourcemaps = require('gulp-sourcemaps'),
     imagemin = require('gulp-imagemin'),
-    autoprefixer = require('autoprefixer'),
-    postcss = require('gulp-postcss'),
+    autoPrefixer = require('autoprefixer'),
+    postCss = require('gulp-postcss'),
     del = require('del'),
     rev = require('gulp-rev'),
-    revCollector = require('gulp-rev-collector');
+    revCollector = require('gulp-rev-collector'),
+    spriteSmith = require('gulp.spritesmith'),
+    buffer = require('vinyl-buffer'),
+    csso = require('gulp-csso'),
+    merge = require('merge-stream');
 
 var paths = {
-  scripts: {
-    src: 'src/js/**/*.js',
-    rev: 'src/rev/js/',
-    dest: 'dest/js/'
-  },
-  styles: {
-    src: 'src/scss/**/*.scss',
-    rev: 'src/rev/css/',
-    dest: 'dest/css/'
-  },
-  images: {
-    src: 'src/img/**',
-    rev: 'src/rev/img/',
-    dest: 'dest/img/'
-  },
-  tpl: {
-    src: 'src/*.html',
-    dest: 'dest/'
-  }
+    scripts: {
+        rev: 'src/rev/js/',
+        dest: 'dest/js/'
+    },
+    styles: {
+        rev: 'src/rev/css/',
+        dest: 'dest/css/',
+        spriteDest: 'src/css/sprite/'
+    },
+    images: {
+        rev: 'src/rev/img/',
+        dest: 'dest/img/',
+        spriteDest: 'src/img/sprite/'
+    },
+    tpl: {
+        dest: 'dest/'
+    }
 };
+
+var resources = {
+    scripts: {
+        src: 'src/js/**/*.js'
+    },
+    styles: {
+        src: 'src/scss/**/*.scss'
+    },
+    images: {
+        src: 'src/img/**',
+        spriteSrc: 'src/img/**/*.png'
+    },
+    tpl: {
+        src: 'src/*.html'
+    }
+}
 // Scripts process
 // 1.uglify
 // 2.generate mainfest and hash files
 function scripts(){
-    return gulp.src(paths.scripts.src)
+    return gulp.src(resources.scripts.src)
         .pipe(uglify())
         .pipe(rev())
         .pipe(gulp.dest(paths.scripts.dest))
@@ -49,12 +67,12 @@ function scripts(){
 // 4.add sourcemaps
 // 5.generate mainfest and hash files
 function styles(){
-    return sass(paths.styles.src, {
+    return sass(resources.styles.src, {
             style: 'compressed',
             sourcemap: true
         })
         .on('error', sass.logError)
-        .pipe(postcss([autoprefixer()]))
+        .pipe(postCss([autoPrefixer()]))
         .pipe(sourcemaps.write())
         .pipe(rev())
         .pipe(gulp.dest(paths.styles.dest))
@@ -66,12 +84,34 @@ function styles(){
 // 1.compress images
 // 2.generate mainfest and hash files
 function images(){
-    return gulp.src(paths.images.src)
+    return gulp.src(resources.images.src)
         .pipe(imagemin())
         .pipe(rev())
         .pipe(gulp.dest(paths.images.dest))
         .pipe(rev.manifest())
         .pipe(gulp.dest(paths.images.rev));
+}
+
+// Generate Sprite
+function sprite() {
+    var spriteData = gulp.src(resources.images.spriteSrc).pipe(spriteSmith({
+        imgName: 'sprite.png',
+        cssName: 'sprite.css'
+    }));
+    // Pipe image stream through image optimizer and onto disk 
+    var imgStream = spriteData.img
+    // DEV: We must buffer our stream into a Buffer for `imagemin` 
+    .pipe(buffer())
+    // .pipe(imagemin())
+    .pipe(gulp.dest(paths.images.spriteDest));
+
+    // Pipe CSS stream through CSS optimizer and onto disk 
+    var cssStream = spriteData.css
+    // .pipe(csso())
+    .pipe(gulp.dest(paths.styles.spriteDest));
+
+    // Return a merged stream to handle both `end` events 
+    return merge(imgStream, cssStream);
 }
 
 // Clean
@@ -82,7 +122,7 @@ function clean(){
 // Replace (JS CSS Img)'s links in HTML
 // e.g.: css/index.css => dest/css/index.css
 function replace() {
-    return gulp.src(['src/rev/**/*.json', paths.tpl.src])
+    return gulp.src(['src/rev/**/*.json', resources.tpl.src])
         .pipe(revCollector({
             replaceReved: true,  //模板中已经被替换的文件是否还能再被替换,默认是false
             dirReplacements: {   //标识目录替换的集合, 因为gulp-rev创建的manifest文件不包含任何目录信息,
@@ -103,8 +143,8 @@ function replaceCssUrl() {
 // 1.watch javascript
 // 2.watch scss
 function watch(){
-    gulp.watch(paths.scripts.src, scripts);
-    gulp.watch(paths.styles.src, styles);
+    gulp.watch(resources.scripts.src, scripts);
+    gulp.watch(resources.styles.src, styles);
 }
 
 exports.clean = clean;
@@ -117,6 +157,7 @@ gulp.task('default',  gulp.parallel(scripts, styles, watch));
 
 gulp.task('build', gulp.series(
     clean,
+    sprite,
     gulp.parallel(scripts, styles, images),
     replace,
     replaceCssUrl
