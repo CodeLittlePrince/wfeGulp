@@ -1,0 +1,4 @@
+web/dest
+web/src/rev
+web/node_modules
+web/.sass-cache
