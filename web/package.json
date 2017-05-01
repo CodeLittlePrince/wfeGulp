@@ -6,8 +6,8 @@
     "gulp-autoprefixer": "^3.1.1",
     "gulp-imagemin": "^3.2.0",
     "gulp-postcss": "^6.4.0",
-    "gulp-replace-src": "0.0.1",
     "gulp-rev": "^7.1.2",
+    "gulp-rev-all": "^0.9.7",
     "gulp-rev-collector": "^1.1.1",
     "gulp-sourcemaps": "^2.6.0"
   },

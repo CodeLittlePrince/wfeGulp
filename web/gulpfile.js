@@ -7,8 +7,7 @@ var gulp = require('gulp'),
     postcss = require('gulp-postcss'),
     del = require('del'),
     rev = require('gulp-rev'),
-    revCollector = require('gulp-rev-collector'),
-    srcReplace = require('gulp-replace-src');
+    revCollector = require('gulp-rev-collector');
 
 var paths = {
   scripts: {
@@ -22,7 +21,7 @@ var paths = {
     dest: 'dest/css/'
   },
   images: {
-    src: 'src/img/**/*',
+    src: 'src/img/**',
     rev: 'src/rev/img/',
     dest: 'dest/img/'
   },
@@ -33,7 +32,7 @@ var paths = {
 };
 // Scripts process
 // 1.uglify
-// 2.generate mainfest
+// 2.generate mainfest and hash files
 function scripts(){
     return gulp.src(paths.scripts.src)
         .pipe(uglify())
@@ -48,7 +47,7 @@ function scripts(){
 // 2.compress css
 // 3.add prefix
 // 4.add sourcemaps
-// 5.generate mainfest
+// 5.generate mainfest and hash files
 function styles(){
     return sass(paths.styles.src, {
             style: 'compressed',
@@ -65,7 +64,7 @@ function styles(){
 
 // Images process
 // 1.compress images
-// 2.generate mainfest
+// 2.generate mainfest and hash files
 function images(){
     return gulp.src(paths.images.src)
         .pipe(imagemin())
@@ -77,10 +76,10 @@ function images(){
 
 // Clean
 function clean(){
-    return del(['dest/**/*']);
+    return del(['dest/**', 'src/rev/**']);
 }
 
-// Genetate Files With Hash Suffix & Replace Link In HTML
+// Replace (JS CSS Img)'s links in HTML
 // e.g.: css/index.css => dest/css/index.css
 function replace() {
     return gulp.src(['src/rev/**/*.json', paths.tpl.src])
@@ -94,7 +93,12 @@ function replace() {
         }))
         .pipe(gulp.dest('dest'));
 }
-
+// Replace Image Url in CSS
+function replaceCssUrl() {
+    return gulp.src(['src/rev/img/*.json', 'dest/css/**/*.css'])
+        .pipe(revCollector())
+        .pipe(gulp.dest('dest/css'));
+}
 // Watch
 // 1.watch javascript
 // 2.watch scss
@@ -114,5 +118,6 @@ gulp.task('default',  gulp.parallel(scripts, styles, watch));
 gulp.task('build', gulp.series(
     clean,
     gulp.parallel(scripts, styles, images),
-    replace
+    replace,
+    replaceCssUrl
 ));
