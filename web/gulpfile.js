@@ -20,6 +20,7 @@ var paths = {
     },
     styles: {
         rev: 'src/rev/css/',
+        src: 'src/css/',
         dest: 'dest/css/',
         spriteDest: 'src/css/sprite/'
     },
@@ -38,7 +39,8 @@ var resources = {
         src: 'src/js/**/*.js'
     },
     styles: {
-        src: 'src/scss/**/*.scss'
+        scssSrc: 'src/scss/**/*.scss',
+        cssSrc: 'src/css/**/*.css'
     },
     images: {
         src: 'src/img/**',
@@ -66,14 +68,18 @@ function scripts(){
 // 3.add prefix
 // 4.add sourcemaps
 // 5.generate mainfest and hash files
-function styles(){
-    return sass(resources.styles.src, {
+function parseSass(){
+    return sass(resources.styles.scssSrc, {
             style: 'compressed',
             sourcemap: true
         })
         .on('error', sass.logError)
         .pipe(postCss([autoPrefixer()]))
         .pipe(sourcemaps.write())
+        .pipe(gulp.dest(paths.styles.src))
+}
+function stylesHash(){
+    return gulp.src(resources.styles.cssSrc)
         .pipe(rev())
         .pipe(gulp.dest(paths.styles.dest))
         .pipe(rev.manifest())
@@ -96,7 +102,12 @@ function images(){
 function sprite() {
     var spriteData = gulp.src(resources.images.spriteSrc).pipe(spriteSmith({
         imgName: 'sprite.png',
-        cssName: 'sprite.css'
+        cssName: 'sprite.css',
+        padding: 10,
+        cssVarMap: function(sprite) {
+            // sprite.name = 'icon-' + sprite.name;
+            sprite.name = sprite.name;
+        }
     }));
     // Pipe image stream through image optimizer and onto disk 
     var imgStream = spriteData.img
@@ -116,7 +127,7 @@ function sprite() {
 
 // Clean
 function clean(){
-    return del(['dest/**', 'src/rev/**']);
+    return del(['dest/**', 'src/rev/**', paths.images.spriteDest, paths.styles.src]);
 }
 
 // Replace (JS CSS Img)'s links in HTML
@@ -143,22 +154,29 @@ function replaceCssUrl() {
 // 1.watch javascript
 // 2.watch scss
 function watch(){
-    gulp.watch(resources.scripts.src, scripts);
-    gulp.watch(resources.styles.src, styles);
+    // gulp.watch(resources.scripts.src, scripts); dev感觉不需要监控js
+    gulp.watch(resources.styles.scssSrc, parseSass);
 }
 
 exports.clean = clean;
 exports.scripts = scripts;
-exports.styles = styles;
+exports.parseSass = parseSass;
+exports.stylesHash = stylesHash;
+exports.sprite = sprite;
 exports.images = images;
 exports.watch = watch;
+exports.replace = replace;
+exports.replaceCssUrl = replaceCssUrl;
 
-gulp.task('default',  gulp.parallel(scripts, styles, watch));
+// gulp.task('default',  gulp.parallel(scripts, styles, watch));
+gulp.task('default',  gulp.parallel(parseSass, watch));
 
 gulp.task('build', gulp.series(
     clean,
-    sprite,
-    gulp.parallel(scripts, styles, images),
+    gulp.parallel(
+        scripts,
+        gulp.series(parseSass, sprite, stylesHash, images)
+    ),
     replace,
     replaceCssUrl
 ));

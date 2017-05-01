@@ -18,13 +18,13 @@ To change `display` (e.g. `display: inline-block;`), we suggest using a common C
 */
 .icon-2 {
   background-image: url(sprite.png);
-  background-position: 0px 0px;
-  width: 228px;
-  height: 300px;
+  background-position: -160px 0px;
+  width: 150px;
+  height: 85px;
 }
 .icon-3 {
   background-image: url(sprite.png);
-  background-position: -228px 0px;
-  width: 228px;
-  height: 300px;
+  background-position: 0px 0px;
+  width: 150px;
+  height: 130px;
 }
