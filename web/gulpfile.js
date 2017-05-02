@@ -1,3 +1,4 @@
+// 同时安装-g 的gulp4.0
 var gulp = require('gulp'),
     uglify = require('gulp-uglify'),
     sass = require('gulp-ruby-sass'),
