@@ -11,7 +11,10 @@ var gulp = require('gulp'),
     spriteSmith = require('gulp.spritesmith'),
     buffer = require('vinyl-buffer'),
     csso = require('gulp-csso'),
-    merge = require('merge-stream');
+    merge = require('merge-stream'),
+    gulpWatch = require('gulp-watch'),
+    path = require('path'),
+    fileSystem = require('fs');
 
 var paths = {
     scripts: {
@@ -20,7 +23,8 @@ var paths = {
     },
     styles: {
         rev: 'src/rev/css/',
-        src: 'src/css/',
+        cssSrc: 'src/css/',
+        scssSrc: 'src/scss/',
         dest: 'dest/css/',
         spriteDest: 'src/css/sprite/'
     },
@@ -76,7 +80,7 @@ function parseSass(){
         .on('error', sass.logError)
         .pipe(postCss([autoPrefixer()]))
         .pipe(sourcemaps.write())
-        .pipe(gulp.dest(paths.styles.src))
+        .pipe(gulp.dest(paths.styles.cssSrc))
 }
 function stylesHash(){
     return gulp.src(resources.styles.cssSrc)
@@ -127,7 +131,7 @@ function sprite() {
 
 // Clean
 function clean(){
-    return del(['dest/**', 'src/rev/**', paths.images.spriteDest, paths.styles.src]);
+    return del(['dest/**', 'src/rev/**', paths.images.spriteDest, paths.styles.cssSrc]);
 }
 
 // Replace (JS CSS Img)'s links in HTML
@@ -154,8 +158,17 @@ function replaceCssUrl() {
 // 1.watch javascript
 // 2.watch scss
 function watch(){
-    // gulp.watch(resources.scripts.src, scripts); dev感觉不需要监控js
-    gulp.watch(resources.styles.scssSrc, parseSass);
+    // gulp.watch(resources.scripts.src, scripts);
+    // gulp.watch(resources.styles.scssSrc, parseSass); This is naive gulp
+    gulpWatch(paths.styles.scssSrc)
+        .on('add', parseSass)
+        .on('change', parseSass)
+        .on('unlink', function(file){
+            var distFile = paths.styles.cssSrc + path.relative(paths.styles.scssSrc, file); // return **.scss
+            distFile = distFile.slice(0, -4) + 'css'; // replace suffix scss to css
+            console.log(distFile)
+            fileSystem.existsSync(distFile) && fileSystem.unlink(distFile);
+        });
 }
 
 exports.clean = clean;
