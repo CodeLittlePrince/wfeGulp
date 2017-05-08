@@ -7,6 +7,7 @@ var gulp = require('gulp'),
     autoPrefixer = require('autoprefixer'),
     postCss = require('gulp-postcss'),
     del = require('del'),
+    mkdirp = require('mkdirp'),
     rev = require('gulp-rev'),
     revCollector = require('gulp-rev-collector'),
     spriteSmith = require('gulp.spritesmith'),
@@ -14,9 +15,7 @@ var gulp = require('gulp'),
     csso = require('gulp-csso'),
     merge = require('merge-stream'),
     // gulpWatch = require('gulp-watch'),
-    path = require('path'),
-    fileSystem = require('fs'),
-    chokidar = require('chokidar');
+    path = require('path');
     // cache = require('gulp-cached'),
     // changed = require('gulp-changed');
 
@@ -166,11 +165,17 @@ function replaceCssUrl() {
 // 2.watch scss
 gulp.task('watch',function(){
     // gulp.watch(resources.scripts.src, scripts);
-    var watcher = chokidar.watch(paths.styles.scssSrc);
+    var watcher = gulp.watch(paths.styles.scssSrc); // 这里注意要是添监控文件的话就触发不了unlinkDir这样的事件了 
     watcher
         .on('add', gulp.parallel('parseSass'))
         .on('change', gulp.parallel('parseSass'))
         .on('unlinkDir', dirPath => {
+            var dirPathFromSrc = path.relative(path.resolve(paths.styles.scssSrc), dirPath);
+            var destDirPath = path.resolve(paths.styles.cssSrc, dirPathFromSrc);
+            console.log(destDirPath);
+            del.sync(destDirPath);
+        })
+        .on('addDir', dirPath => {
             var dirPathFromSrc = path.relative(path.resolve(paths.styles.scssSrc), dirPath);
             var destDirPath = path.resolve(paths.styles.cssSrc, dirPathFromSrc);
             console.log(destDirPath);
@@ -181,7 +186,8 @@ gulp.task('watch',function(){
             // distFile = distFile.slice(0, -4) + 'css'; // replace suffix scss to css
             // fileSystem.existsSync(distFile) && fileSystem.unlink(distFile);
             var filePathFromSrc = path.relative(path.resolve(paths.styles.scssSrc), file);
-            var destFilePath = path.resolve(paths.styles.cssSrc, filePathFromSrc).slice(0, -4) + 'css';
+            var destFilePath = path.resolve(paths.styles.cssSrc, filePathFromSrc).slice(0, -4);
+            destFilePath += 'css';
             del.sync(destFilePath);
         });
 });
