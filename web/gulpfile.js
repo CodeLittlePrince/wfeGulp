@@ -60,21 +60,20 @@ var resources = {
 // Scripts process
 // 1.uglify
 // 2.generate mainfest and hash files
-function scripts(){
+gulp.task('scripts', function(){
     return gulp.src(resources.scripts.src)
         .pipe(uglify())
         .pipe(rev())
         .pipe(gulp.dest(paths.scripts.dest))
         .pipe(rev.manifest())
         .pipe(gulp.dest(paths.scripts.rev));
-}
+});
 
 // Styles process
 // 1.compile scss
 // 2.compress css
 // 3.add prefix
 // 4.add sourcemaps
-// 5.generate mainfest and hash files
 gulp.task('parseSass', function(){
     return gulp.src(resources.styles.scssSrc, {since: gulp.lastRun('parseSass')}) // since 设置后，只会parseSass修改过的文件
         .pipe(sourcemaps.init())
@@ -88,28 +87,29 @@ gulp.task('parseSass', function(){
         .pipe(sourcemaps.write())
         .pipe(gulp.dest(paths.styles.cssSrc))
 });
-function stylesHash(){
+// Generate CSS mainfest and hash files
+gulp.task('stylesHash', function(){
     return gulp.src(resources.styles.cssSrc)
         .pipe(rev())
         .pipe(gulp.dest(paths.styles.dest))
         .pipe(rev.manifest())
         .pipe(gulp.dest(paths.styles.rev));
-}
+});
 
 // Images process
 // 1.compress images
 // 2.generate mainfest and hash files
-function images(){
+gulp.task('images', function(){
     return gulp.src(resources.images.src)
         .pipe(imagemin())
         .pipe(rev())
         .pipe(gulp.dest(paths.images.dest))
         .pipe(rev.manifest())
         .pipe(gulp.dest(paths.images.rev));
-}
+});
 
 // Generate Sprite
-function sprite() {
+gulp.task('sprite', function(){
     var spriteData = gulp.src(resources.images.spriteSrc).pipe(spriteSmith({
         imgName: 'sprite.png',
         cssName: 'sprite.css',
@@ -133,16 +133,16 @@ function sprite() {
 
     // Return a merged stream to handle both `end` events 
     return merge(imgStream, cssStream);
-}
+});
 
 // Clean
-function clean(){
+gulp.task('clean', function(){
     return del(['dest/**', 'src/rev/**', paths.images.spriteDest, paths.styles.cssSrc]);
-}
+});
 
 // Replace (JS CSS Img)'s links in HTML
 // e.g.: css/index.css => dest/css/index.css
-function replace() {
+gulp.task('replace', function(){
     return gulp.src(['src/rev/**/*.json', resources.tpl.src])
         .pipe(revCollector({
             replaceReved: true,  //模板中已经被替换的文件是否还能再被替换,默认是false
@@ -153,13 +153,13 @@ function replace() {
             }
         }))
         .pipe(gulp.dest('dest'));
-}
+});
 // Replace Image Url in CSS
-function replaceCssUrl() {
+gulp.task('replaceCssUrl',function(){
     return gulp.src(['src/rev/img/*.json', 'dest/css/**/*.css'])
         .pipe(revCollector())
         .pipe(gulp.dest('dest/css'));
-}
+});
 // Watch
 // 1.watch javascript
 // 2.watch scss
@@ -167,14 +167,20 @@ gulp.task('watch',function(){
     // gulp.watch(resources.scripts.src, scripts);
     var watcher = gulp.watch(paths.styles.scssSrc); // 这里注意要是添监控文件的话就触发不了unlinkDir这样的事件了 
     watcher
-        .on('add', gulp.parallel('parseSass'))
-        .on('change', gulp.parallel('parseSass'))
-        .on('unlinkDir', dirPath => {
+        .on('add', gulp.parallel('parseSass')) // 文件增加的时候事件处理
+        .on('change', gulp.parallel('parseSass')) // 文件改变的时候事件处理
+        .on('unlink', file => { // 文件删除的时候事件处理
+            var filePathFromSrc = path.relative(path.resolve(paths.styles.scssSrc), file);
+            var destFilePath = path.resolve(paths.styles.cssSrc, filePathFromSrc).slice(0, -4);
+            destFilePath += 'css';
+            del.sync(destFilePath);
+        })
+        .on('unlinkDir', dirPath => { // 文件夹删除的时候事件处理
             var dirPathFromSrc = path.relative(path.resolve(paths.styles.scssSrc), dirPath);
             var destDirPath = path.resolve(paths.styles.cssSrc, dirPathFromSrc);
             del.sync(destDirPath);
         })
-        .on('addDir', dirPath => {
+        .on('addDir', dirPath => { // 文件夹增加的时候事件处理
             var dirPathFromSrc = path.relative(path.resolve(paths.styles.scssSrc), dirPath);
             var destDirPath = path.resolve(paths.styles.cssSrc, dirPathFromSrc);
             mkdirp(destDirPath, function(err){
@@ -182,15 +188,6 @@ gulp.task('watch',function(){
                     console.log(err);
                 }
             })
-        })
-        .on('unlink', file => {
-            // var distFile = paths.styles.cssSrc + path.relative(paths.styles.scssSrc, file); // return **.scss
-            // distFile = distFile.slice(0, -4) + 'css'; // replace suffix scss to css
-            // fileSystem.existsSync(distFile) && fileSystem.unlink(distFile);
-            var filePathFromSrc = path.relative(path.resolve(paths.styles.scssSrc), file);
-            var destFilePath = path.resolve(paths.styles.cssSrc, filePathFromSrc).slice(0, -4);
-            destFilePath += 'css';
-            del.sync(destFilePath);
         });
 });
 
@@ -208,11 +205,11 @@ gulp.task('watch',function(){
 gulp.task('default',  gulp.parallel('parseSass', 'watch'));
 
 gulp.task('build', gulp.series(
-    clean,
+    'clean',
     gulp.parallel(
-        scripts,
-        gulp.series('parseSass', sprite, stylesHash, images)
+        'scripts',
+        gulp.series('parseSass', 'sprite', 'stylesHash', 'images')
     ),
-    replace,
-    replaceCssUrl
+    'replace',
+    'replaceCssUrl'
 ));
