@@ -1,7 +1,7 @@
 // 同时安装-g 的gulp4.0
 var gulp = require('gulp'),
     uglify = require('gulp-uglify'),
-    sass = require('gulp-ruby-sass'),
+    sass = require('gulp-sass'),
     sourcemaps = require('gulp-sourcemaps'),
     imagemin = require('gulp-imagemin'),
     autoPrefixer = require('autoprefixer'),
@@ -13,9 +13,12 @@ var gulp = require('gulp'),
     buffer = require('vinyl-buffer'),
     csso = require('gulp-csso'),
     merge = require('merge-stream'),
-    gulpWatch = require('gulp-watch'),
+    // gulpWatch = require('gulp-watch'),
     path = require('path'),
-    fileSystem = require('fs');
+    fileSystem = require('fs'),
+    chokidar = require('chokidar');
+    // cache = require('gulp-cached'),
+    // changed = require('gulp-changed');
 
 var paths = {
     scripts: {
@@ -73,16 +76,19 @@ function scripts(){
 // 3.add prefix
 // 4.add sourcemaps
 // 5.generate mainfest and hash files
-function parseSass(){
-    return sass(resources.styles.scssSrc, {
-            style: 'compressed',
-            sourcemap: true
-        })
-        .on('error', sass.logError)
+gulp.task('parseSass', function(){
+    return gulp.src(resources.styles.scssSrc, {since: gulp.lastRun('parseSass')}) // since 设置后，只会parseSass修改过的文件
+        .pipe(sourcemaps.init())
+        .pipe(
+            sass({
+                outputStyle: 'compressed'
+            })
+            .on('error', sass.logError)
+        )
         .pipe(postCss([autoPrefixer()]))
         .pipe(sourcemaps.write())
         .pipe(gulp.dest(paths.styles.cssSrc))
-}
+});
 function stylesHash(){
     return gulp.src(resources.styles.cssSrc)
         .pipe(rev())
@@ -158,38 +164,46 @@ function replaceCssUrl() {
 // Watch
 // 1.watch javascript
 // 2.watch scss
-function watch(){
+gulp.task('watch',function(){
     // gulp.watch(resources.scripts.src, scripts);
-    // gulp.watch(resources.styles.scssSrc, parseSass); This is naive gulp
-    gulpWatch(paths.styles.scssSrc)
-        .on('add', parseSass)
-        .on('change', parseSass)
-        .on('unlink', function(file){
-            var distFile = paths.styles.cssSrc + path.relative(paths.styles.scssSrc, file); // return **.scss
-            distFile = distFile.slice(0, -4) + 'css'; // replace suffix scss to css
-            console.log(distFile)
-            fileSystem.existsSync(distFile) && fileSystem.unlink(distFile);
+    var watcher = chokidar.watch(paths.styles.scssSrc);
+    watcher
+        .on('add', gulp.parallel('parseSass'))
+        .on('change', gulp.parallel('parseSass'))
+        .on('unlinkDir', dirPath => {
+            var dirPathFromSrc = path.relative(path.resolve(paths.styles.scssSrc), dirPath);
+            var destDirPath = path.resolve(paths.styles.cssSrc, dirPathFromSrc);
+            console.log(destDirPath);
+            del.sync(destDirPath);
+        })
+        .on('unlink', file => {
+            // var distFile = paths.styles.cssSrc + path.relative(paths.styles.scssSrc, file); // return **.scss
+            // distFile = distFile.slice(0, -4) + 'css'; // replace suffix scss to css
+            // fileSystem.existsSync(distFile) && fileSystem.unlink(distFile);
+            var filePathFromSrc = path.relative(path.resolve(paths.styles.scssSrc), file);
+            var destFilePath = path.resolve(paths.styles.cssSrc, filePathFromSrc).slice(0, -4) + 'css';
+            del.sync(destFilePath);
         });
-}
+});
 
-exports.clean = clean;
-exports.scripts = scripts;
-exports.parseSass = parseSass;
-exports.stylesHash = stylesHash;
-exports.sprite = sprite;
-exports.images = images;
-exports.watch = watch;
-exports.replace = replace;
-exports.replaceCssUrl = replaceCssUrl;
+// exports.clean = clean;
+// exports.scripts = scripts;
+// exports.'parseSass' = 'parseSass';
+// exports.stylesHash = stylesHash;
+// exports.sprite = sprite;
+// exports.images = images;
+// exports.watch = watch;
+// exports.replace = replace;
+// exports.replaceCssUrl = replaceCssUrl;
 
 // gulp.task('default',  gulp.parallel(scripts, styles, watch));
-gulp.task('default',  gulp.parallel(parseSass, watch));
+gulp.task('default',  gulp.parallel('parseSass', 'watch'));
 
 gulp.task('build', gulp.series(
     clean,
     gulp.parallel(
         scripts,
-        gulp.series(parseSass, sprite, stylesHash, images)
+        gulp.series('parseSass', sprite, stylesHash, images)
     ),
     replace,
     replaceCssUrl
