@@ -172,14 +172,16 @@ gulp.task('watch',function(){
         .on('unlinkDir', dirPath => {
             var dirPathFromSrc = path.relative(path.resolve(paths.styles.scssSrc), dirPath);
             var destDirPath = path.resolve(paths.styles.cssSrc, dirPathFromSrc);
-            console.log(destDirPath);
             del.sync(destDirPath);
         })
         .on('addDir', dirPath => {
             var dirPathFromSrc = path.relative(path.resolve(paths.styles.scssSrc), dirPath);
             var destDirPath = path.resolve(paths.styles.cssSrc, dirPathFromSrc);
-            console.log(destDirPath);
-            del.sync(destDirPath);
+            mkdirp(destDirPath, function(err){
+                if (err) {
+                    console.log(err);
+                }
+            })
         })
         .on('unlink', file => {
             // var distFile = paths.styles.cssSrc + path.relative(paths.styles.scssSrc, file); // return **.scss
