@@ -202,7 +202,11 @@ gulp.task('watch',function(){
 // exports.replaceCssUrl = replaceCssUrl;
 
 // gulp.task('default',  gulp.parallel(scripts, styles, watch));
-gulp.task('default',  gulp.parallel('parseSass', 'watch'));
+gulp.task('default', gulp.series(
+    'clean',
+    gulp.parallel('parseSass', 'watch')
+    )
+);
 
 gulp.task('build', gulp.series(
     'clean',
